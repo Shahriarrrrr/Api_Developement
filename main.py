@@ -19,7 +19,13 @@ posts = [{"title": "The first title",
           "content": "Starting to progress in FastApi",
           "published": "True",
           "rating": 4,
-          "id": 1}]
+          "id": 1},
+         {"title": "The second title",
+          "content": "Starting to progress in FastApi",
+          "published": "True",
+          "rating": 4,
+          "id": 2}
+         ]
 
 
 def find_post(id):
@@ -27,6 +33,12 @@ def find_post(id):
         if p["id"] == id:
             return p
 
+
+def find_index_post(id):
+    for i, p in enumerate(posts):
+        if p["id"] == id:
+            print(i)
+            return i
 
 @app.get("/")
 def root():
@@ -59,3 +71,14 @@ def create_post(post: Post):
 @app.get("/check_server")
 def check_server():
     return {"message:" f"{datetime.now()}"}
+
+@app.delete("/deletePost/{id}")
+def delete_post(id: int):
+    index = find_index_post(id)
+    print(index)
+    if index is not None:
+        posts.pop(index)
+        print(index, "flag")
+        return {"message": "Post deleted successfully"}
+
+    raise HTTPException(status_code=404, detail="Post not found")
