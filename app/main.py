@@ -72,13 +72,27 @@ def create_post(post: Post):
 def check_server():
     return {"message:" f"{datetime.now()}"}
 
-@app.delete("/deletePost/{id}")
+
+@app.delete("/deletePost/{id}", status_code= status.HTTP_204_NO_CONTENT)
 def delete_post(id: int):
     index = find_index_post(id)
-    print(index)
     if index is not None:
         posts.pop(index)
-        print(index, "flag")
-        return {"message": "Post deleted successfully"}
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     raise HTTPException(status_code=404, detail="Post not found")
+
+@app.put("/updatePost/{id}")
+def update_post(id: int, post: Post):
+    index = find_index_post(id)
+    if index is not None:
+        post_dict = post.dict()
+        post_dict["id"] = id
+        posts[index] = post_dict
+
+        return {"message": "Updated Successfully"}
+
+    raise HTTPException(status_code=404, detail="Post not found")
+
+
+
