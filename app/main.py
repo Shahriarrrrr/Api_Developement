@@ -4,6 +4,19 @@ from fastapi import FastAPI, Response, status, HTTPException
 from fastapi.params import Body
 from datetime import datetime
 from pydantic import BaseModel
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import time
+
+try:
+    conn = psycopg2.connect(host='localhost', database='YOUR DB', user='YOUR USER', password='YOUR ADMIN',
+                            cursor_factory=RealDictCursor)
+    cursor = conn.cursor()
+    print("Database was connection succesfull!")
+except Exception as error:
+    print("Connecting to database failed")
+    print("Error: ", error)
+    #time.sleep(2)
 
 
 class Post(BaseModel):
@@ -11,6 +24,7 @@ class Post(BaseModel):
     content: str
     published: bool = True  #Default value
     rating: Optional[int] = None
+
 
 
 app = FastAPI()
@@ -26,7 +40,6 @@ posts = [{"title": "The first title",
           "rating": 4,
           "id": 2}
          ]
-
 
 def find_post(id):
     for p in posts:
@@ -47,25 +60,27 @@ def root():
 
 @app.get("/get_post")
 def get_posts():
-    return {"data": f"{posts}"}
+    cursor.execute("""SELECT * FROM post""")
+    my_posts = cursor.fetchall()
+    return {"data": f"{my_posts}"}
 
 
 @app.get("/posts/{id}")
 def get_post(id: int):
-    print(id)
-    post = find_post(id)
-    if not post:
+    cursor.execute("""SELECT * FROM post WHERE id = (%s) """, (id,))
+    my_post = cursor.fetchone()
+    if not my_post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"post with id: {id} not found")
-    return {"data": f"Here is post: {post}"}
+    return {"data": f"Here is post: {my_post}"}
 
 
 @app.post("/createpost", status_code=status.HTTP_201_CREATED)
 def create_post(post: Post):
-    post_dict = post.dict()
-    post_dict["id"] = random.randrange(0, 10000)
-    posts.append(post_dict)
-    return {"message": "New post is created"}
+    cursor.execute("""INSERT INTO post (title,content,published) VALUES (%s, %s, %s) RETURNING * """,(post.title, post.content, post.published))
+    new_post = cursor.fetchone()
+    conn.commit()
+    return {"data": new_post}
 
 
 @app.get("/check_server")
